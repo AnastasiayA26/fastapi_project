@@ -7,9 +7,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import select
 from src.models.books import Book
-from src.schemas import IncomingBook, ReturnedAllbooks, ReturnedBook
-from icecream import ic
+from src.models.sellers import Seller
+from src.routers.v1.tokens import get_current_seller
+from src.schemas import IncomingBook, ReturnedAllbooks, ReturnedBook, UpdateBook
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 from src.configurations import get_async_session
 
 books_router = APIRouter(tags=["books"], prefix="/books")
@@ -24,9 +26,7 @@ DBSession = Annotated[AsyncSession, Depends(get_async_session)]
 @books_router.post(
     "/", response_model=ReturnedBook, status_code=status.HTTP_201_CREATED
 )  # Прописываем модель ответа
-async def create_book(
-    book: IncomingBook,
-    session: DBSession,
+async def create_book(book: IncomingBook, session: DBSession, current_seller: Seller = Depends(get_current_seller),
 ):  # прописываем модель валидирующую входные данные
     # session = get_async_session() вместо этого мы используем иньекцию зависимостей DBSession
 
@@ -37,7 +37,7 @@ async def create_book(
             "author": book.author,
             "year": book.year,
             "pages": book.pages,
-            "seller_id": book.seller_id
+            "seller_id":  current_seller.id
         }
     )
 
@@ -69,28 +69,45 @@ async def get_book(book_id: int, session: DBSession):
 
 # Ручка для удаления книги
 @books_router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: int, session: DBSession):
+async def delete_book(book_id: int, session: DBSession, current_seller: Seller = Depends(get_current_seller)):
     deleted_book = await session.get(Book, book_id)
-    ic(deleted_book)  # Красивая и информативная замена для print. Полезна при отладке.
-    if deleted_book:
-        await session.delete(deleted_book)
-    else:
-        return Response(status_code=status.HTTP_404_NOT_FOUND)
+    if not deleted_book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+
+    if deleted_book.seller_id != current_seller.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    
+    await session.delete(deleted_book)
+    await session.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# Ручка для обновления данных о книге
 @books_router.put("/{book_id}", response_model=ReturnedBook)
-async def update_book(book_id: int, new_book_data: ReturnedBook, session: DBSession):
-    # Оператор "морж", позволяющий одновременно и присвоить значение и проверить его. Заменяет то, что закомментировано выше.
-    if updated_book := await session.get(Book, book_id):
-        updated_book.author = new_book_data.author
-        updated_book.title = new_book_data.title
-        updated_book.year = new_book_data.year
-        updated_book.pages = new_book_data.pages
-        update_book.seller_id = new_book_data.seller_id
+async def update_book(book_id: int, new_book_data: UpdateBook, session: DBSession, current_seller: Seller = Depends(get_current_seller)):
+    book = await session.get(Book, book_id)
+    if not book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+    if (book.seller_id != current_seller.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
-        await session.flush()
 
-        return updated_book
+    book.author = new_book_data.author
+    book.title = new_book_data.title
+    book.year = new_book_data.year
+    book.pages = new_book_data.pages
 
-    return Response(status_code=status.HTTP_404_NOT_FOUND)
+    book.seller_id = current_seller.id
+    await session.commit()
+
+    await session.refresh(book)
+    return ReturnedBook(
+        id=book.id,
+        title=book.title,
+        author=book.author,
+        year=book.year,
+        pages=book.pages,
+        seller_id=book.seller_id
+    )

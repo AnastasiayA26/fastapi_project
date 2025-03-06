@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.books import Book
 from fastapi import status
 from fastapi.testclient import TestClient
+from src.auth.auth import hash_password
 from icecream import ic
+from fastapi import HTTPException
+
 
 
 # Тест на ручку создающую продавца
@@ -69,7 +72,6 @@ async def test_get_sellers(db_session, async_client):
         ]
     }
 
-
 # Тест на ручку получения одного продавца и всех книг, принадлежащих ему
 @pytest.mark.asyncio
 async def test_get_single_seller(db_session, async_client):
@@ -113,6 +115,58 @@ async def test_get_single_seller(db_session, async_client):
             }
         ]
     }
+# ##
+# # Тест на ручку получения одного продавца и всех книг, принадлежащих ему
+# @pytest.mark.asyncio
+# async def test_get_single_seller(db_session, async_client):
+#     # Создаем продавца и книги
+#     seller = Seller(first_name="Daniil", last_name="Popov", e_mail="popov@gmail.com", password=hash_password("67895"))
+#     db_session.add(seller)
+#     await db_session.flush()
+
+#     data = {
+#         "username": "popov@gmail.com", 
+#         "password": "67895"
+#     }
+#     token_response = await async_client.post("/api/v1/token/", data=data)
+#     token = token_response.json().get("access_token")
+#     headers = {"Authorization": f"Bearer {token}"}
+
+#     book = Book(author="Pushkin", title="Eugeny Onegin", year=2001, pages=104, seller_id=seller.id)
+#     book_2 = Book(author="Lermontov", title="Mziri", year=2015, pages=104, seller_id=seller.id)
+
+#     db_session.add_all([book, book_2])
+#     await db_session.flush()
+
+#     response = await async_client.get(f"/api/v1/seller/{seller.id}", headers = headers)
+
+#     assert response.status_code == status.HTTP_200_OK
+
+#     assert response.json() == {
+#         "id": seller.id,
+#         "first_name": "Daniil",
+#         "last_name": "Popov",
+#         "e_mail": "popov@gmail.com",
+#         "books": [
+#             {
+#                 "title": "Eugeny Onegin",
+#                 "author": "Pushkin",
+#                 "year": 2001,
+#                 "id": book.id,
+#                 "pages": 104,
+#                 "seller_id": book.seller_id,
+#             },
+#             {
+#                 "id": book_2.id,
+#                 "title": "Mziri",
+#                 "author": "Lermontov",
+#                 "year": 2015,
+#                 "id": book_2.id,
+#                 "pages": 104,
+#                 "seller_id": book_2.seller_id,
+#             }
+#         ]
+#     }
 
 
 # Тест на ручку обновления продавца без изменения пароля
@@ -123,7 +177,7 @@ async def test_update_seller(db_session, async_client):
     seller = Seller(first_name="Daniil", last_name="Popov", e_mail="popov@gmail.com", password="67895")
 
     db_session.add(seller)
-    await db_session.flush()
+    await db_session.commit()
 
     response = await async_client.put(
         f"/api/v1/seller/{seller.id}",
@@ -150,12 +204,20 @@ async def test_update_seller(db_session, async_client):
 
 @pytest.mark.asyncio
 async def test_delete_seller_with_invalid_seller_id(db_session, async_client):
-    seller = Seller(first_name="Anastasia", last_name="ivanova", e_mail="ivanova@gmail.com", password="0975")
+    seller = Seller(first_name="Anastasia", last_name="ivanova", e_mail="ivanova@gmail.com", password=hash_password("0975"))
 
     db_session.add(seller)
     await db_session.flush()
 
-    response = await async_client.delete(f"/api/v1/seller/{seller.id + 1}")
+    data = {
+        "username": "ivanova@gmail.com", 
+        "password": "0975"
+    }
+    token_response = await async_client.post("/api/v1/token/", data=data)
+    token = token_response.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = await async_client.delete(f"/api/v1/books/{seller.id + 1}", headers = headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -178,3 +240,7 @@ async def test_delete_seller(db_session, async_client):
     all_books = await db_session.execute(select(Book).filter(Book.seller_id == seller.id))
     books = all_books.scalars().all()
     assert len(books) == 0 
+
+    all_sellers = await db_session.execute(select(Seller))
+    sellers = all_sellers.scalars().all()
+    assert len(sellers) == 0

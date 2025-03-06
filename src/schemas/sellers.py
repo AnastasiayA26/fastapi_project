@@ -30,7 +30,4 @@ class ReturnedSellerWithBooks(BaseSeller):
     id: int
     books: list[ReturnedBook]
 
-# class UpdateSeller(BaseModel):
-#     first_name: str
-#     last_name: str
-#     e_mail: str
+

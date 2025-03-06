@@ -9,11 +9,15 @@ from sqlalchemy import select
 from sqlalchemy import delete
 from src.models.sellers import Seller
 from src.models.books import Book
+from src.auth.auth import hash_password
 from src.schemas import IncomingSeller, ReturnedSeller, ReturnedAllsellers, ReturnedSellerWithBooks, ReturnedBook
 from icecream import ic
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configurations import get_async_session
+from src.routers.v1.tokens import get_current_seller
 from sqlalchemy.orm import selectinload
+from fastapi import HTTPException
+
 from fastapi.responses import JSONResponse
 
 sellers_router = APIRouter(tags=["seller"], prefix="/seller")
@@ -40,7 +44,7 @@ async def create_sellers(
             "first_name": seller.first_name,
             "last_name": seller.last_name,
             "e_mail": seller.e_mail,
-            "password": seller.password,
+            "password": hash_password(seller.password),
         }
     )
 
@@ -62,7 +66,10 @@ async def get_all_sellers(session: DBSession):
 
 
 @sellers_router.get("/{seller_id}", response_model=ReturnedSellerWithBooks)
-async def get_seller(seller_id: int, session: DBSession):
+async def get_seller(seller_id: int, session: DBSession, current_seller: Seller = Depends(get_current_seller)):
+    if current_seller.id != seller_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    
     result = await session.execute(
         select(Seller).options(selectinload(Seller.seller_books)).filter(Seller.id == seller_id)
     )
@@ -90,9 +97,13 @@ async def get_seller(seller_id: int, session: DBSession):
     )
 
 
+
 @sellers_router.delete("/{seller_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_seller(seller_id: int, session: DBSession):
     deleted_seller = await session.get(Seller, seller_id)
+    if not deleted_seller:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
     ic(deleted_seller)  # Красивая и информативная замена для print. Полезна при отладке.
     if deleted_seller:
         books_to_delete = await session.execute(select(Book).filter(Book.seller_id == seller_id))
@@ -109,20 +120,6 @@ async def delete_seller(seller_id: int, session: DBSession):
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
-# @sellers_router.delete("/{seller_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def delete_seller(seller_id: int, session: AsyncSession):
-#     deleted_seller = await session.get(Seller, seller_id)
-#     ic(deleted_seller)  # Красивая и информативная замена для print. Полезна при отладке.
-    
-#     if deleted_seller:
-#         # Удаляем книги, связанные с продавцом
-#         await session.execute(delete(Book).where(Book.seller_id == seller_id))
-#         # Удаляем самого продавца
-#         await session.delete(deleted_seller)
-#         # Сохраняем изменения
-#         return Response(status_code=status.HTTP_204_NO_CONTENT)
-#     else:
-#         return Response(status_code=status.HTTP_404_NOT_FOUND)
     
 # Ручка для обновления данных о продавце
 @sellers_router.put("/{seller_id}", response_model=ReturnedSeller)
