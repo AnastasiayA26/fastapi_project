@@ -1,3 +1,4 @@
+
 # Набор тестов для эндпоинтов которые можно запустить
 # в VSCode с помощью плагина  REST Client
 # Найти можно по идентификатору: humao.rest-client
@@ -11,7 +12,7 @@ Content-Type: application/json
 {
     "first_name": "max",
     "last_name": "ivanov",
-    "e_mail": "maxivanov@gmail.com",
+    "e_mail": "maxivanoщv@gmail.com",
     "password": "1590g"
 }
 ###
@@ -47,6 +48,7 @@ Content-Type: application/json
 # Создаем книгу
 POST http://localhost:8000/api/v1/books/ HTTP/1.1
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYXhpdmFub3ZAZ21haWwuY29tIiwiZXhwIjoxNzQxMzY1MDY3fQ.Fys6BkG3gYOca-IOEtDvQx4YfWBwJNkqUCglvrdKyHU
 
 {
     "title": "Clean Architecture",
@@ -61,6 +63,8 @@ Content-Type: application/json
 # Создаем книгу
 POST http://localhost:8000/api/v1/books/ HTTP/1.1
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYXhpdmFub3ZAZ21haWwuY29tIiwiZXhwIjoxNzQxMzY1MDY3fQ.Fys6BkG3gYOca-IOEtDvQx4YfWBwJNkqUCglvrdKyHU
+
 
 {
     "title": "Eugeny Onegin",
@@ -99,6 +103,8 @@ Content-Type: application/json
 ### 
 # Получаем одного продавца по ИД
 GET http://localhost:8000/api/v1/seller/1 HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYXhpdmFub3ZAZ21haWwuY29tIiwiZXhwIjoxNzQxMzY1MDY3fQ.Fys6BkG3gYOca-IOEtDvQx4YfWBwJNkqUCglvrdKyHU
+
 
 ###
 
@@ -115,6 +121,8 @@ GET http://localhost:8000/api/v1/books/2 HTTP/1.1
 # Обновляем поля в данных о книге
 PUT http://localhost:8000/api/v1/books/1 HTTP/1.1
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYXhpdmFub3ZAZ21haWwuY29tIiwiZXhwIjoxNzQxMzY1MDY3fQ.Fys6BkG3gYOca-IOEtDvQx4YfWBwJNkqUCglvrdKyHU
+
 
 {
     "id": 1,
@@ -122,13 +130,14 @@ Content-Type: application/json
     "author": "Robert Martin",
     "year": 2022,
     "pages": 310,
-    "seller_id": 6
+    "seller_id": 1
 }
 
 ###
 
 # Удаляем книгу
-DELETE http://localhost:8000/api/v1/books/4 HTTP/1.1
+DELETE http://localhost:8000/api/v1/books/2 HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtYXhpdmFub3ZAZ21haWwuY29tIiwiZXhwIjoxNzQxMzY1MDY3fQ.Fys6BkG3gYOca-IOEtDvQx4YfWBwJNkqUCglvrdKyHU
 
 ###
 
@@ -145,3 +154,9 @@ GET http://localhost:8000/api/v1/seller/ HTTP/1.1
 GET http://localhost:8000/api/v1/books/ HTTP/1.1
 
 ###
+
+POST http://localhost:8000/api/v1/token HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+username=ivanova@gmail.com&password=1590g
+

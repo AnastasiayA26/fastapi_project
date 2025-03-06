@@ -76,25 +76,37 @@ async def test_get_sellers(db_session, async_client):
 @pytest.mark.asyncio
 async def test_get_single_seller(db_session, async_client):
     # Создаем продавца и книги
-    seller = Seller(first_name="Daniil", last_name="Popov", e_mail="popov@gmail.com", password="67895")
+    seller = Seller(first_name="Anastasia", last_name="ivanova", e_mail="ivanova@gmail.com", password=hash_password("0975"))
+
     db_session.add(seller)
     await db_session.flush()
 
+    data = {
+        "username": "ivanova@gmail.com", 
+        "password": "0975"
+    }
     book = Book(author="Pushkin", title="Eugeny Onegin", year=2001, pages=104, seller_id=seller.id)
     book_2 = Book(author="Lermontov", title="Mziri", year=2015, pages=104, seller_id=seller.id)
-
+    
     db_session.add_all([book, book_2])
     await db_session.commit()  # <-- ключевой момент
 
-    response = await async_client.get(f"/api/v1/seller/{seller.id}")
+
+    token_response = await async_client.post("/api/v1/token/", data=data)
+    token = token_response.json().get("access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+
+
+    response = await async_client.get(f"/api/v1/seller/{seller.id}", headers = headers)
 
     assert response.status_code == status.HTTP_200_OK
 
     assert response.json() == {
         "id": seller.id,
-        "first_name": "Daniil",
-        "last_name": "Popov",
-        "e_mail": "popov@gmail.com",
+        "first_name": "Anastasia",
+        "last_name": "ivanova",
+        "e_mail": "ivanova@gmail.com",
         "books": [
             {
                 "title": "Eugeny Onegin",
@@ -115,6 +127,7 @@ async def test_get_single_seller(db_session, async_client):
             }
         ]
     }
+
 # ##
 # # Тест на ручку получения одного продавца и всех книг, принадлежащих ему
 # @pytest.mark.asyncio
